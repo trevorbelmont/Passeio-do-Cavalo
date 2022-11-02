@@ -56,9 +56,15 @@ int ride(int x, int y, int track) {
     printf(" x = %d , y = %d    ; mvmnt: %d\t ", x, y, move);
 
     if (move == 0) {
-        printf("\ndeadend! passo: %d: prev : %d,%d", tile[x][y].p, tile[y][y].prevX, tile[x][y].prevY);
-        // vai voltar a até um passo que tenha opção, escolherá o melhor passo antes d
-        //e atualizar os movimentos (pra não levar em consideração os passo já tomados)
+        printf("\ndeadend! BACKTRACKIN' NO passo: %d: prev : %d,%d", tile[x][y].p, tile[y][y].prevX, tile[x][y].prevY);
+
+        // vai voltar até um passo que tenha opção, escolherá o melhor movimento antes de
+        // atualizar os movimentos (pra não levar em consideração os passos já tomados)
+        
+        passo--;
+        tile[x][y].p = 0;
+        ride(tile[x][y].prevX, tile[x][y].prevY, 1);
+
         return 0;
     }
 
@@ -80,40 +86,8 @@ int ride(int x, int y, int track) {
     // displayChessBoard();
     // displayKnightMovements();
 
-    ride(nx, ny, 1);  // não disconta próxima casa pq já foi discontado (tracked)
+    ride(nx, ny, 1);  //  disconta acessibilidade e movimentos da próxima casa (tracked)
     return 1;
-}
-
-pos qualCasa(int x, int y, int mv) {
-    int ml, mc;
-
-    if (mv <= 4) {  // movimentos da esquerda
-        ml = -2 + (mv - 1) / 2;
-        mc = (3 - abs(ml)) * pow(-1, mv - 1);
-    } else if (mv >= 5) {  // movimentos da direita
-        ml = -1 + (mv - 1) / 2;
-        mc = (3 - abs(ml)) * pow(-1, mv - 1);
-    }
-    pos p;
-    p.y = y + mc;
-    p.x = x + ml;
-
-    if (p.x >= 0 && p.x < dim && p.y >= 0 && p.y < dim && tile[p.x][p.y].p <= 0) {  // se casa válida e não visitada
-        return p;
-    } else {
-        printf("\n\n------ ERRO NO QUAL CASA -------------- %d,%d.  movimento: %d \n", p.x, p.y, mv);
-        displayChessBoard();
-        displayKnightMovements();
-
-        printf("\nPasso : %d \n", passo);
-        pos same;
-        same.x = x;
-        same.y = y;
-
-        exit(1);
-
-        return same;
-    }
 }
 
 // dada uma certa casa, retorna o índice do melhor movimento
@@ -170,10 +144,42 @@ int bestMove(int x, int y) {
             }
         }
     }
-    if (best == 0) {
+    if (best == 0) {  // tirar essa linha
         best = best;
     }
     return best;
+}
+
+pos qualCasa(int x, int y, int mv) {
+    int ml, mc;
+
+    if (mv <= 4) {  // movimentos da esquerda
+        ml = -2 + (mv - 1) / 2;
+        mc = (3 - abs(ml)) * pow(-1, mv - 1);
+    } else if (mv >= 5) {  // movimentos da direita
+        ml = -1 + (mv - 1) / 2;
+        mc = (3 - abs(ml)) * pow(-1, mv - 1);
+    }
+    pos p;
+    p.y = y + mc;
+    p.x = x + ml;
+
+    if (p.x >= 0 && p.x < dim && p.y >= 0 && p.y < dim && tile[p.x][p.y].p <= 0) {  // se casa válida e não visitada
+        return p;
+    } else {
+        printf("\n\n------ ERRO NO QUAL CASA -------------- %d,%d.  movimento: %d \n", p.x, p.y, mv);
+        displayChessBoard();
+        displayKnightMovements();
+
+        printf("\nPasso : %d \n", passo);
+        pos same;
+        same.x = x;
+        same.y = y;
+
+        exit(1);
+
+        return same;
+    }
 }
 
 // atualiza os movimentos de uma casa [tile] específico e retorna sua acessibilidade ou freedom.
