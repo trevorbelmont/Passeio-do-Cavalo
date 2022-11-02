@@ -2,11 +2,11 @@
 #include <stdio.h>
 
 #ifndef DIMENSIONS
-#define DIMENSIONS 8
+#define DIMENSIONS 5
 #endif
 
 #ifndef XY
-#define XY 0
+#define XY 1
 #endif
 
 struct pos {
@@ -29,7 +29,7 @@ void displayKnightMovements();
 int updateKnightMoves(int x, int y, int assign);
 pos qualCasa(int x, int y, int mv);
 int bestMove(int x, int y);
-int ride(int x, int y, int track);
+int ride(int x, int y, int track, int ridingBack);
 
 pos tile[DIMENSIONS][DIMENSIONS];
 int dim, passo;
@@ -44,28 +44,39 @@ void update() {
 
     tile[x][y].p = passo = 1;
 
-    ride(x, y, 1);
+    ride(x, y, 1, 0);
 
     displayChessBoard();
     displayKnightMovements();
     printf("\n PASSO: %d\n", passo);
 }
 
-int ride(int x, int y, int track) {
-    int move = bestMove(x, y);  // calcula o melhor passo ou interrompe a execução em endpoints
+int ride(int x, int y, int track, int ridingBack) {  // track = diminui acessibilidade da casa // ridingback = fazendo backTrack ou não
+    int PASSOS = passo;
+    int move = bestMove(x, y);                       // calcula o melhor passo ou interrompe a execução em endpoints
     printf(" x = %d , y = %d    ; mvmnt: %d\t ", x, y, move);
 
     if (move == 0) {
-        printf("\ndeadend! BACKTRACKIN' NO passo: %d: prev : %d,%d", tile[x][y].p, tile[y][y].prevX, tile[x][y].prevY);
-
+        printf("\n\tdeadend! BACKTRACKIN' NO passo: %d: prev : %d,%d\n\n", tile[x][y].p, tile[y][y].prevX, tile[x][y].prevY);
         // vai voltar até um passo que tenha opção, escolherá o melhor movimento antes de
         // atualizar os movimentos (pra não levar em consideração os passos já tomados)
-        
+
+        // mas isso gera um loop uma vez que ele dá backtrack 2 vezes pra mesma casa e mesmo passo. 
+        // o backtrack só em memória do último erro cometido
         passo--;
         tile[x][y].p = 0;
-        ride(tile[x][y].prevX, tile[x][y].prevY, 1);
-
+        ride(tile[x][y].prevX, tile[x][y].prevY, 1, 1);  // último argumento = está fazendo backTrack (true)
         return 0;
+    }
+
+    if (ridingBack && move != 0) {
+        for (int j = 0; j < dim; j++) {
+            for (int i = 0; i < dim; i++) {
+                updateKnightMoves(i,j,1);
+            }
+        }
+        displayChessBoard();
+        displayKnightMovements();
     }
 
     if (track != 0) {    // diminui a liberdade e invalida o movimento considerado dessa casa (CASO JÁ NÃO TENHA SIDO FEITO)
@@ -83,10 +94,16 @@ int ride(int x, int y, int track) {
     tile[nx][ny].p = passo;
     tile[nx][ny].prevX = x;
     tile[nx][ny].prevY = y;
-    // displayChessBoard();
-    // displayKnightMovements();
 
-    ride(nx, ny, 1);  //  disconta acessibilidade e movimentos da próxima casa (tracked)
+    if (passo == dim * dim) {
+        printf("\n\n\t---------SE ACABAOU---------\n");
+        displayChessBoard();
+        // displayKnightMovements();
+        printf("\n\n\t---------SE ACABAOU---------\n");
+        exit(0);
+    }
+
+    ride(nx, ny, 1, 0);  //  disconta acessibilidade e movimentos da próxima casa (tracked)
     return 1;
 }
 
@@ -100,11 +117,10 @@ int bestMove(int x, int y) {
         printf("%d", tile[x][y].mvmnt[i]);
     }
     if (tile[x][y].a <= 0) {
-        printf("\nCasa %d,%d ilhada no passo %d. Prosseguir com backtracking!", x, y, passo);
         // printf("fuck!     liberdade da casa: %d" , updateKnightMoves(x, y, 0));
         displayChessBoard();
         displayKnightMovements();
-        printf("Casa %d,%d ilhada no passo %d. Prosseguir com backtracking!", x, y, passo);
+        printf("\n\tCasa %d,%d ilhada no passo %d. Prosseguir com backtracking!\t", x, y, passo);
 
         // exit(1);
         return 0;
