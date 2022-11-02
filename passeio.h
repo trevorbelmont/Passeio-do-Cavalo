@@ -29,14 +29,14 @@ void displayKnightMovements();
 int updateKnightMoves(int x, int y, int assign);
 pos qualCasa(int x, int y, int mv);
 int bestMove(int x, int y);
-void ride(int x, int y, int track);
+int ride(int x, int y, int track);
 
 pos tile[DIMENSIONS][DIMENSIONS];
 int dim, passo;
 
 void update() {
-    int x = XY %DIMENSIONS;
-    int y = XY / DIMENSIONS; // temporario com define. fazer com scanf
+    int x = XY % DIMENSIONS;
+    int y = XY / DIMENSIONS;  // temporario com define. fazer com scanf
 
     setup();
     displayChessBoard();
@@ -51,15 +51,16 @@ void update() {
     printf("\n PASSO: %d\n", passo);
 }
 
-void ride(int x, int y, int track) {
+int ride(int x, int y, int track) {
     int move = bestMove(x, y);  // calcula o melhor passo ou interrompe a execução em endpoints
     printf(" x = %d , y = %d    ; mvmnt: %d\t ", x, y, move);
 
-if(move == 0){
-    printf("deadend! passo: %d: prev : %d,%d",tile[x][y].p, tile[y][y].prevX, tile[x][y].prevY);
-
-    return;
-}
+    if (move == 0) {
+        printf("\ndeadend! passo: %d: prev : %d,%d", tile[x][y].p, tile[y][y].prevX, tile[x][y].prevY);
+        // vai voltar a até um passo que tenha opção, escolherá o melhor passo antes d
+        //e atualizar os movimentos (pra não levar em consideração os passo já tomados)
+        return 0;
+    }
 
     if (track != 0) {    // diminui a liberdade e invalida o movimento considerado dessa casa (CASO JÁ NÃO TENHA SIDO FEITO)
         tile[x][y].a--;  // a casa ocupada perde um de liberdade, pois o knight se moverá dali
@@ -73,7 +74,6 @@ if(move == 0){
 
     printf(" para: %d , %d\n", nx, ny);
 
-
     tile[nx][ny].p = passo;
     tile[nx][ny].prevX = x;
     tile[nx][ny].prevY = y;
@@ -81,6 +81,7 @@ if(move == 0){
     // displayKnightMovements();
 
     ride(nx, ny, 1);  // não disconta próxima casa pq já foi discontado (tracked)
+    return 1;
 }
 
 pos qualCasa(int x, int y, int mv) {
@@ -125,20 +126,13 @@ int bestMove(int x, int y) {
         printf("%d", tile[x][y].mvmnt[i]);
     }
     if (tile[x][y].a <= 0) {
-        printf("Casa %d,%d ilhada no passo %d. Prosseguir com backtracking!", x, y, passo);
+        printf("\nCasa %d,%d ilhada no passo %d. Prosseguir com backtracking!", x, y, passo);
         // printf("fuck!     liberdade da casa: %d" , updateKnightMoves(x, y, 0));
         displayChessBoard();
         displayKnightMovements();
         printf("Casa %d,%d ilhada no passo %d. Prosseguir com backtracking!", x, y, passo);
 
-        for (int y = 0; y < dim; y++) {
-            for (int x = 0; x < dim; x++) {
-                updateKnightMoves(x, y, 1);  // atualiza todos os movimentos de todos os tiles da matriz
-            }
-        }
-        displayKnightMovements();
-
-        //exit(1);
+        // exit(1);
         return 0;
     }
 
@@ -195,7 +189,7 @@ int updateKnightMoves(int x, int y, int assign) {
         mvmnt++;
         // todas as variações a direita -já que c é sempre positivo
         if (x + c >= 0 && x + c < dim && y + l >= 0 && y + l < dim) {  // se o movimento é válido
-            if (tile[x + c][y + l].p <= 0) {                           // se a casa não foi previamente visitada
+            if (tile[x + c][y + l].p <= 0) {                           // tile não visitado                          // se a casa não foi previamente visitada
                 freedom++;
                 if (assign != 0) tile[x][y].mvmnt[mvmnt] = updateKnightMoves(x + c, y + l, 0);
             } else {
@@ -206,7 +200,7 @@ int updateKnightMoves(int x, int y, int assign) {
         mvmnt++;
         // todas avariações a esquerda, já que c é sempre positivo
         if (x + c >= 0 && x + c < dim && y - l >= 0 && y - l < dim) {
-            if (tile[x + c][y - l].p <= 0) {
+            if (tile[x + c][y - l].p <= 0) {  // tile não visitado
                 freedom++;
                 if (assign != 0) tile[x][y].mvmnt[mvmnt] = updateKnightMoves(x + c, y - l, 0);
             } else {
@@ -265,12 +259,12 @@ void displayChessBoard() {  // desenha a matriz com /step#freedom/
     for (int y = 0; y < dim; y++) {
         for (int x = 0; x < dim; x++) {
             if (tile[x][y].p < 10) {
-                printf(" 0%d ", tile[x][y].p);
+                // printf(" 0%d ", tile[x][y].p);
+                printf(" |0%d#%d| ", tile[x][y].p, tile[x][y].a);
             } else {
-                printf(" %d ", tile[x][y].p);
+                // printf(" %d ", tile[x][y].p);
+                printf(" |%d#%d| ", tile[x][y].p, tile[x][y].a);
             }
-            // printf(" %d ", tile[x][y].p);
-            // printf(" |%d#%d| ", tile[x][y].p, tile[x][y].a);
         }
         printf("\n");
     }
