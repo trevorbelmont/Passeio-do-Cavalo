@@ -6,7 +6,7 @@
 #endif
 
 #ifndef XY
-#define XY 1
+#define XY 7
 #endif
 
 struct pos {
@@ -34,6 +34,8 @@ int ride(int x, int y, int track, int ridingBack);
 pos tile[DIMENSIONS][DIMENSIONS];
 int dim, passo;
 
+int allSteps, backSteps;
+
 void update() {
     int x = XY % DIMENSIONS;
     int y = XY / DIMENSIONS;  // temporario com define. fazer com scanf
@@ -42,7 +44,7 @@ void update() {
     displayChessBoard();
     displayKnightMovements();
 
-    tile[x][y].p = passo = 1;
+    tile[x][y].p = passo = allSteps = 1;
 
     ride(x, y, 1, 0);
 
@@ -52,7 +54,9 @@ void update() {
 }
 
 int ride(int x, int y, int track, int ridingBack) {  // track = diminui acessibilidade da casa // ridingback = fazendo backTrack ou não
-    int PASSOS = passo;
+    int PASSOS = passo; //apenas para debug
+   
+
     int move = bestMove(x, y);                       // calcula o melhor passo ou interrompe a execução em endpoints
     printf(" x = %d , y = %d    ; mvmnt: %d\t ", x, y, move);
 
@@ -64,7 +68,10 @@ int ride(int x, int y, int track, int ridingBack) {  // track = diminui acessibi
         // mas isso gera um loop uma vez que ele dá backtrack 2 vezes pra mesma casa e mesmo passo. 
         // o backtrack só em memória do último erro cometido
         passo--;
+
         tile[x][y].p = 0;
+        
+        backSteps++;
         ride(tile[x][y].prevX, tile[x][y].prevY, 1, 1);  // último argumento = está fazendo backTrack (true)
         return 0;
     }
@@ -98,11 +105,11 @@ int ride(int x, int y, int track, int ridingBack) {  // track = diminui acessibi
     if (passo == dim * dim) {
         printf("\n\n\t---------SE ACABAOU---------\n");
         displayChessBoard();
+        printf("Allsteps = %d \t backSteps = %d \t , passos = %d",allSteps,backSteps,passo);
         // displayKnightMovements();
         printf("\n\n\t---------SE ACABAOU---------\n");
         exit(0);
     }
-
     ride(nx, ny, 1, 0);  //  disconta acessibilidade e movimentos da próxima casa (tracked)
     return 1;
 }
@@ -235,6 +242,7 @@ int updateKnightMoves(int x, int y, int assign) {
 }
 
 void setup() {
+    allSteps = backSteps = 0;
     dim = DIMENSIONS;
     int counter = 0;
     // duplo for que percorre a matriz
