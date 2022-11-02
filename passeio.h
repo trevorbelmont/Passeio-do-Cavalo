@@ -2,11 +2,11 @@
 #include <stdio.h>
 
 #ifndef DIMENSIONS
-#define DIMENSIONS 5
+#define DIMENSIONS 8
 #endif
 
 #ifndef XY
-#define XY 7
+#define XY 63
 #endif
 
 struct pos {
@@ -14,6 +14,7 @@ struct pos {
     int y;
     int a;
     int mvmnt[9];
+    int persistent[9];
     int m;
     int p;
     int prevX;
@@ -23,7 +24,7 @@ struct pos {
 void setup();
 int marginalidade(int x, int y);
 void setMarginalidade(int display);
-void displayChessBoard();
+void displayChessBoard(int simple);
 void displayKnightMovements();
 
 int updateKnightMoves(int x, int y, int assign);
@@ -41,54 +42,74 @@ void update() {
     int y = XY / DIMENSIONS;  // temporario com define. fazer com scanf
 
     setup();
-    displayChessBoard();
+    displayChessBoard(0);
     displayKnightMovements();
 
     tile[x][y].p = passo = allSteps = 1;
 
     ride(x, y, 1, 0);
 
-    displayChessBoard();
+    displayChessBoard(0);
     displayKnightMovements();
     printf("\n PASSO: %d\n", passo);
 }
 
 int ride(int x, int y, int track, int ridingBack) {  // track = diminui acessibilidade da casa // ridingback = fazendo backTrack ou não
-    int PASSOS = passo; //apenas para debug
-   
+    int PASSOS = passo;
+    // apenas para debug
 
-    int move = bestMove(x, y);                       // calcula o melhor passo ou interrompe a execução em endpoints
+    if (ridingBack && tile[x][y].a > 0) {
+        for (int i = 1; i < 9; i++) {
+            tile[x][y].persistent[i] = tile[x][y].mvmnt[i];
+        }
+        tile[x][y].persistent[0] = tile[x][y].a;
+    }
+
+    int move = bestMove(x, y);  // calcula o melhor passo ou interrompe a execução em endpoints
     printf(" x = %d , y = %d    ; mvmnt: %d\t ", x, y, move);
 
-    if (move == 0) {
+    if (move <= 0) {
         printf("\n\tdeadend! BACKTRACKIN' NO passo: %d: prev : %d,%d\n\n", tile[x][y].p, tile[y][y].prevX, tile[x][y].prevY);
         // vai voltar até um passo que tenha opção, escolherá o melhor movimento antes de
         // atualizar os movimentos (pra não levar em consideração os passos já tomados)
 
-        // mas isso gera um loop uma vez que ele dá backtrack 2 vezes pra mesma casa e mesmo passo. 
+        // mas isso gera um loop uma vez que ele dá backtrack 2 vezes pra mesma casa e mesmo passo.
         // o backtrack só em memória do último erro cometido
         passo--;
-
-        tile[x][y].p = 0;
-        
         backSteps++;
+        allSteps++;
+        tile[x][y].p = 0;
+
         ride(tile[x][y].prevX, tile[x][y].prevY, 1, 1);  // último argumento = está fazendo backTrack (true)
         return 0;
     }
 
     if (ridingBack && move != 0) {
+        int qqcoisa = move;
+
         for (int j = 0; j < dim; j++) {
             for (int i = 0; i < dim; i++) {
-                updateKnightMoves(i,j,1);
+                updateKnightMoves(i, j, 1);
             }
         }
-        displayChessBoard();
+        for (int i = 1; i < 9; i++) {
+            tile[x][y].mvmnt[i] = tile[x][y].persistent[i];
+        }
+        tile[x][y].persistent[0]--;
+        tile[x][y].a = tile[x][y].persistent[0];  // pois a vai diminuir abaixo no if do track
+        tile[x][y].persistent[move] = tile[x][y].mvmnt[move] = 0;
+        track = 0;  // não faz o tracking do if abaixo, pois já foi feito neste if atual
+
+        displayChessBoard(0);
         displayKnightMovements();
     }
 
     if (track != 0) {    // diminui a liberdade e invalida o movimento considerado dessa casa (CASO JÁ NÃO TENHA SIDO FEITO)
         tile[x][y].a--;  // a casa ocupada perde um de liberdade, pois o knight se moverá dali
         tile[x][y].mvmnt[move] = 0;
+        /*
+                tile[x][y].persistent[0]--;
+                tile[x][y].persistent[move] = 0; */
     }
 
     if (move != 0) passo++;
@@ -104,12 +125,15 @@ int ride(int x, int y, int track, int ridingBack) {  // track = diminui acessibi
 
     if (passo == dim * dim) {
         printf("\n\n\t---------SE ACABAOU---------\n");
-        displayChessBoard();
-        printf("Allsteps = %d \t backSteps = %d \t , passos = %d",allSteps,backSteps,passo);
+        displayChessBoard(1);
+        //printf("Allsteps = %d \t backSteps = %d \t , passo = %d", allSteps, backSteps, passo);
+        printf("backtrack = %d \t , passo = %d", backSteps, passo);
+        
         // displayKnightMovements();
         printf("\n\n\t---------SE ACABAOU---------\n");
         exit(0);
     }
+    allSteps++;
     ride(nx, ny, 1, 0);  //  disconta acessibilidade e movimentos da próxima casa (tracked)
     return 1;
 }
@@ -125,7 +149,7 @@ int bestMove(int x, int y) {
     }
     if (tile[x][y].a <= 0) {
         // printf("fuck!     liberdade da casa: %d" , updateKnightMoves(x, y, 0));
-        displayChessBoard();
+        displayChessBoard(0);
         displayKnightMovements();
         printf("\n\tCasa %d,%d ilhada no passo %d. Prosseguir com backtracking!\t", x, y, passo);
 
@@ -191,7 +215,7 @@ pos qualCasa(int x, int y, int mv) {
         return p;
     } else {
         printf("\n\n------ ERRO NO QUAL CASA -------------- %d,%d.  movimento: %d \n", p.x, p.y, mv);
-        displayChessBoard();
+        displayChessBoard(0);
         displayKnightMovements();
 
         printf("\nPasso : %d \n", passo);
@@ -248,17 +272,22 @@ void setup() {
     // duplo for que percorre a matriz
     for (int y = 0; y < dim; y++) {
         for (int x = 0; x < dim; x++) {
-            tile[x][y].p = 0;  // atribui -1 inicialmente a todos os tiles (output concerns)
-
-            int i = 0;
-            while (i < 9) {               // loop que percorre os 8 mov[dim * dim][8] de cada title[dim][dim]
-                tile[x][y].mvmnt[i] = 0;  // atribui -1 para a freedom e pra os 8 mov
-                tile[x][y].a = 0;
+            tile[x][y].p = 0;            // atribui -1 inicialmente a todos os tiles (output concerns)
+                                         /*
+                                                     int i = 0;
+                                                     while (i < 9) {               // loop que percorre os 8 mov[dim * dim][8] de cada title[dim][dim]
+                                                         tile[x][y].mvmnt[i] = 0;  // atribui -1 para a freedom e pra os 8 mov
+                                                         tile[x][y].a = 0;
+                                                         i++;
+                                                     }
+                                                     */
+            updateKnightMoves(x, y, 1);  // atualiza todos os movimentos de todos os tiles da matriz
+            int i = 1;
+            while (i < 9) {                                      // loop que percorre os 8 mov[dim * dim][8] de cada title[dim][dim]
+                tile[x][y].persistent[i] = tile[x][y].mvmnt[i];  // atribui -1 para a freedom e pra os 8 mov
                 i++;
             }
-            updateKnightMoves(x, y, 1);  // atualiza todos os movimentos de todos os tiles da matriz
-            counter++;
-            // tile[x][y].p = counter;
+            tile[x][y].persistent[0] = tile[x][y].a;
         }
     }
 
@@ -284,16 +313,16 @@ void setMarginalidade(int display) {
     }
 }
 
-void displayChessBoard() {  // desenha a matriz com /step#freedom/
-    printf("\n //////     STEPS AND FREEDOM     //////// \n");
+void displayChessBoard(int simple) {  // desenha a matriz com /step#freedom/
+    printf("\n //////     TABULEIRO     //////// \n");
     for (int y = 0; y < dim; y++) {
         for (int x = 0; x < dim; x++) {
             if (tile[x][y].p < 10) {
-                // printf(" 0%d ", tile[x][y].p);
-                printf(" |0%d#%d| ", tile[x][y].p, tile[x][y].a);
+                if (simple) printf(" 0%d ", tile[x][y].p);
+                if (!simple) printf(" |0%d#%d| ", tile[x][y].p, tile[x][y].a);
             } else {
-                // printf(" %d ", tile[x][y].p);
-                printf(" |%d#%d| ", tile[x][y].p, tile[x][y].a);
+                if (simple) printf(" %d ", tile[x][y].p);
+                if (!simple) printf(" |%d#%d| ", tile[x][y].p, tile[x][y].a);
             }
         }
         printf("\n");
