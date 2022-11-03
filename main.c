@@ -1,9 +1,11 @@
+#include <stdio.h>
+
 #include "passeio.h"
-# include <stdio.h>
 
-
-int main()
-{   
-    update();
+int main() {
+    while (1 > 0) {
+        update();
+        limpa();
+    }
     return 0;
 }
