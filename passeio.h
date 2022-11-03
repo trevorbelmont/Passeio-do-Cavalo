@@ -6,7 +6,7 @@
 #endif
 
 #ifndef XY
-#define XY 63
+#define XY 1
 #endif
 
 struct pos {
@@ -57,6 +57,10 @@ void update() {
 int ride(int x, int y, int track, int ridingBack) {  // track = diminui acessibilidade da casa // ridingback = fazendo backTrack ou não
     int PASSOS = passo;
     // apenas para debug
+    if(passo <= 0){
+        printf("fudeu! passo = %d\n", passo);
+       // exit(0);
+    }
 
     if (ridingBack && tile[x][y].a > 0) {
         for (int i = 1; i < 9; i++) {
@@ -73,8 +77,6 @@ int ride(int x, int y, int track, int ridingBack) {  // track = diminui acessibi
         // vai voltar até um passo que tenha opção, escolherá o melhor movimento antes de
         // atualizar os movimentos (pra não levar em consideração os passos já tomados)
 
-        // mas isso gera um loop uma vez que ele dá backtrack 2 vezes pra mesma casa e mesmo passo.
-        // o backtrack só em memória do último erro cometido
         passo--;
         backSteps++;
         allSteps++;
@@ -85,7 +87,6 @@ int ride(int x, int y, int track, int ridingBack) {  // track = diminui acessibi
     }
 
     if (ridingBack && move != 0) {
-        int qqcoisa = move;
 
         for (int j = 0; j < dim; j++) {
             for (int i = 0; i < dim; i++) {
@@ -98,7 +99,7 @@ int ride(int x, int y, int track, int ridingBack) {  // track = diminui acessibi
         tile[x][y].persistent[0]--;
         tile[x][y].a = tile[x][y].persistent[0];  // pois a vai diminuir abaixo no if do track
         tile[x][y].persistent[move] = tile[x][y].mvmnt[move] = 0;
-        track = 0;  // não faz o tracking do if abaixo, pois já foi feito neste if atual
+        track = 0;  // não faz o tracking no if abaixo, pois já foi feito neste if atual
 
         displayChessBoard(0);
         displayKnightMovements();
@@ -113,6 +114,7 @@ int ride(int x, int y, int track, int ridingBack) {  // track = diminui acessibi
     }
 
     if (move != 0) passo++;
+    else{return 0;}
 
     int nx = qualCasa(x, y, move).x;
     int ny = qualCasa(x, y, move).y;
@@ -126,9 +128,9 @@ int ride(int x, int y, int track, int ridingBack) {  // track = diminui acessibi
     if (passo == dim * dim) {
         printf("\n\n\t---------SE ACABAOU---------\n");
         displayChessBoard(1);
-        //printf("Allsteps = %d \t backSteps = %d \t , passo = %d", allSteps, backSteps, passo);
-        printf("backtrack = %d \t , passo = %d", backSteps, passo);
-        
+         printf("Allsteps = %d \t backSteps = %d \t , passo = %d", allSteps, backSteps, passo);
+        //printf("backtrack = %d \t , passo = %d", backSteps, passo);
+
         // displayKnightMovements();
         printf("\n\n\t---------SE ACABAOU---------\n");
         exit(0);
@@ -273,14 +275,6 @@ void setup() {
     for (int y = 0; y < dim; y++) {
         for (int x = 0; x < dim; x++) {
             tile[x][y].p = 0;            // atribui -1 inicialmente a todos os tiles (output concerns)
-                                         /*
-                                                     int i = 0;
-                                                     while (i < 9) {               // loop que percorre os 8 mov[dim * dim][8] de cada title[dim][dim]
-                                                         tile[x][y].mvmnt[i] = 0;  // atribui -1 para a freedom e pra os 8 mov
-                                                         tile[x][y].a = 0;
-                                                         i++;
-                                                     }
-                                                     */
             updateKnightMoves(x, y, 1);  // atualiza todos os movimentos de todos os tiles da matriz
             int i = 1;
             while (i < 9) {                                      // loop que percorre os 8 mov[dim * dim][8] de cada title[dim][dim]
