@@ -1,7 +1,7 @@
 #include <math.h>
 #include <stdio.h>
 
-// dim 20 xy 90 não faz nenhum backtrack
+// dim 20 e xy 90 (11,5) não faz nenhum backtrack 
 #ifndef DIMENSIONS
 #define DIMENSIONS 8
 #endif
