@@ -1,25 +1,33 @@
 #include <math.h>
 #include <stdio.h>
 
-// dim 20 e xy 90 (11,5) não faz nenhum backtrack 
+// dim 20 e xy 90 (11,5) não faz nenhum backtrack
+// dim 31 e xy (5,5)  e dim 40 xy(2,2) tb não
 #ifndef DIMENSIONS
 #define DIMENSIONS 8
 #endif
 
+//usado em versões anteriores do código quando naõ tinha leitura de coordenadas iniciais
 #ifndef XY
 #define XY 0
 #endif
 
+// estrutura de dados usada para cada casa do tabulerio
 struct pos {
-    int x;
-    int y;
-    int a;
-    int mvmnt[9];
-    int persistent[9];
-    int m;
-    int p;
-    int prevX;
-    int prevY;
+    int x; // coordenada X. 
+    int y; // coordenada Y.
+    int a; // acessibilidade ou liberdade de movimentos possíveis a partir da casa
+    
+    int mvmnt[9]; // vetor de movimentos possíveis. cada índice guarda o nível de acessibilidade, a, da casa que aquele movimento leva
+    // Exemplo:  mvmnt[8] = 2  (Fazendo o movimento 8 chega-se a uma casa com 2 de acessibilidade/liberdade.)
+
+    int persistent[9]; // guarda em que passo o movimento do índice foi feito. 
+    //Ex: persistent[3] = 32 (O movimento 3 já foi tentado anteriormente nessa casa no passo 32)
+    
+    int m; // valor estático da marginalidade da casa (em função da posição e do tamanho do tabuleiro)
+    int p; // registra o passo do passeio.
+    int prevX; // a coordenada x da casa do passo anterior
+    int prevY; // coordenda y da casa do passo anterior
 } typedef pos;
 
 void setup();
@@ -32,72 +40,71 @@ void displayKnightMovements();
 int updateKnightMoves(int x, int y, int assign);
 pos qualCasa(int x, int y, int mv);
 int bestMove(int x, int y);
-int ride(int x, int y, int track, int ridingBack);
+void ride(int x, int y, int track, int ridingBack);
 
-pos tile[DIMENSIONS][DIMENSIONS];
-int dim, passo;
+pos tile[DIMENSIONS][DIMENSIONS]; // declara matriz do tabuleiro
+int dim; // declaa variável de dimensão do tabuleiro 
+int passo; // declara variável do passo de cada casa no passeio
+int allSteps, backSteps; // respectivamente contador de passos totais e de retornos das tentativas
 
-int allSteps, backSteps;
-
-void update() {
-    /* int x = XY % DIMENSIONS;
-    int y = XY / DIMENSIONS;  // temporario com define. fazer com scanf
- */
-
-    int x = 0, y = 0;
-    printf("digite as coordenadas: ");
-    scanf("%d %d", &x, &y);
+void update(int x, int y) {
+    // adequa o valor da entrada x e y,[1,8], aos valores do código, [0,7]
     x--;
     y--;
+    //prepara tabuleiro e inicializa as variáveis para seus valores iniciais devidos
     setup();
 
+    // a casa inicial recebe o valor de passo 1
     tile[x][y].p = passo = allSteps = 1;
-
-    // displayChessBoard(0);
-    // displayKnightMovements();
 
     ride(x, y, 1, 0);
 
-    // displayChessBoard(1);
-    // displayKnightMovements();
+    // imprime o tabuleiro final
+    displayChessBoard(1);
+    limpa();
+
     printf("\n end of update:::::: PASSO: %d\n", passo);
 }
 
-int ride(int x, int y, int track, int ridingBack) {  // track = diminui acessibilidade da casa // ridingback = fazendo backTrack ou não
-    if (passo <= 0 && backSteps > 2) {
+//void de cavalga percorrendo as casas
+void ride(int x, int y, int track, int ridingBack) {  // track = diminui acessibilidade da casa // ridingback = fazendo backTrack ou não
+    if (passo <= 0 && allSteps > 8) {
         printf("fudeu! passo = %d  backtracking = %d  allSteps = %d\n", passo, backSteps, allSteps);
-        exit(0);
+        return;
     }
 
+    // Se está fazendo backtracking e há um movimento ainda não explorado naquela casa e NAQUELE PASSO
     if (ridingBack && tile[x][y].a > 0) {
+        // for duplo que percorre a matriz do tabuleiro
         for (int j = 0; j < dim; j++) {
             for (int i = 0; i < dim; i++) {
-                updateKnightMoves(i, j, 1);
+                updateKnightMoves(i, j, 1);  // atualiza as movimentações possíveis, mvmnt[], de todas as casas
             }
         }
-        for (int i = 1; i < 9; i++) {
-            if (tile[x][y].persistent[i] == passo) {
-                tile[x][y].mvmnt[i] = 0;
-                tile[x][y].a--;
+
+        // for que percorre o vetor persistent APENAS da casa atual
+        for (int i = 1; i < 9; i++) {  
+            if (tile[x][y].persistent[i] == passo) { // checa, no vetor persistent[i], se o movimento i já foi tentado neste mesmo passo
+                tile[x][y].mvmnt[i] = 0; // se o movimento i já foi tentado antes neste msm passo, o moviento i se torna indisponível
+                tile[x][y].a--; // acessibilidade portanto diminui
             }
         }
-        tile[x][y].persistent[0]++;
+        tile[x][y].persistent[0]++; // incrementa o número de tentativas mal-sucedidas na casa (essa variável não é usada)
     }
 
-    int move = bestMove(x, y);  // calcula o melhor passo ou interrompe a execução em endpoints
-    printf(" x = %d , y = %d    ; mvmnt: %d\t ", x, y, move);
+    int move = bestMove(x, y);    // calcula o melhor moviemnto. Caso não haja movimentos disponíveis retorna zero.
+    printf(" x = %d , y = %d    ; mvmnt: %d\t ", x, y, move);  // imprime casa atual e movimento escolhido
 
     if (move <= 0) {  // não achou saída
         printf("\n\tdeadend! BACKTRACKIN' NO passo: %d: prev : %d,%d\n\n", tile[x][y].p, tile[y][y].prevX, tile[x][y].prevY);
-        // vai voltar até um passo que tenha opção, escolherá o melhor movimento antes de
-        // atualizar os movimentos (pra não levar em consideração os passos já tomados)
 
+        // retorna pra casa e passo anterior para tentar outra movimentação
         passo--;
         backSteps++;
-        tile[x][y].p = 0;
+        tile[x][y].p = 0;  // a casa sem saída atual tem o contador de passo zerado
 
-        ride(tile[x][y].prevX, tile[x][y].prevY, 1, 1);  // último argumento diz se está fazendo backTrack (true)
-        return 0;
+        ride(tile[x][y].prevX, tile[x][y].prevY, 1, 1);  // último argumento diz se está fazendo backTracking (true)
+        return;
     }
 
     if (track != 0) {    // diminui a liberdade e invalida o movimento considerado dessa casa (CASO JÁ NÃO TENHA SIDO FEITO)
@@ -108,14 +115,14 @@ int ride(int x, int y, int track, int ridingBack) {  // track = diminui acessibi
 
     if (move != 0) {
         passo++;
-    } else {  // não necessário e inalcançável
-        return 0;
+    } else {  // teste de segurança. Em tese inalcançável.
+        return;
     }
 
     int nx = qualCasa(x, y, move).x;
     int ny = qualCasa(x, y, move).y;
 
-    printf(" para: %d , %d\t passo: %d\n", nx, ny, passo);
+    printf(" para: %d , %d\t passo: %d\n", nx, ny, passo);  // imprime a posição da nova casa e o passo atual
 
     tile[nx][ny].p = passo;
     tile[nx][ny].prevX = x;
@@ -130,51 +137,43 @@ int ride(int x, int y, int track, int ridingBack) {  // track = diminui acessibi
 
         // displayKnightMovements();
         printf("\n\n\t---------SE ACABAOU---------\n");
-        return 1;
+        return;
     }
     ride(nx, ny, 1, 0);  //  disconta acessibilidade e movimentos da próxima casa (tracked)
-    return 1;
+    return;
 }
 
-// dada uma certa casa, retorna o índice do melhor movimento
+// dada uma certa casa, retorna o índice do melhor movimento. Retorna zero se não houver movimento  disponível
 int bestMove(int x, int y) {
-    int menor = (tile[x][y].mvmnt[1] > 0) ? tile[x][y].mvmnt[1] : 9;  // inicialmente atribui a menor liberdade ao primeiro mov ou uma liberdade invalida e alta
-    int best = (tile[x][y].mvmnt[1] > 0) ? 1 : 0;
+    int menor = (tile[x][y].mvmnt[1] > 0) ? tile[x][y].mvmnt[1] : 9;  // inicialmente atribui a menor liberdade ao primeiro mvmnt ou uma liberdade invalida e alta
+    int best = (tile[x][y].mvmnt[1] > 0) ? 1 : 0;                     // inicialmente atribui o índice de melhor movimento ao primeiro mvmnt se disponnível. Caso não disponível, atribui ao índice zero
 
     printf("bestMove da %d,%d : a = [%d]    ", x, y, tile[x][y].a);
     for (int i = 1; i < 9; i++) {
         printf("%d", tile[x][y].mvmnt[i]);
     }
-    if (tile[x][y].a <= 0) {
-        // printf("fuck!     liberdade da casa: %d" , updateKnightMoves(x, y, 0));
-        // displayChessBoard(1);
-        // displayKnightMovements();
+    if (tile[x][y].a <= 0) {  // caso não haja movimentos possíveis (ou não testados neste passo) retorna zero
         printf("\n\tCasa %d,%d ilhada no passo %d. Prosseguir com backtracking!\n", x, y, passo);
         printf("\tAllsteps = %d \t backSteps = %d \t , passo = %d\t", allSteps, backSteps, passo);
-        // exit(1);
         return 0;
     }
 
-    for (int i = 1; i < 9; i++) {
+    for (int i = 1; i < 9; i++) {  // laço que testa os 8 movimentos do cavalo
         int mvi = tile[x][y].mvmnt[i];
 
         if (tile[x][y].mvmnt[i] <= 0) {  // movimento inválido ou leva para casa já vistiada
             continue;
         }
-        int xx = qualCasa(x, y, i).x;
-        int yy = qualCasa(x, y, i).y;
+        pos candidata = qualCasa(x, y, i);  // a posição da casa que o movimento i leva (a possível casa analisada nesta iteração)
+        int xx = candidata.x;
+        int yy = candidata.y;
 
         if (tile[xx][yy].p > 0) {  // não deveria ser necessário (checa se a casa já foi visitada)
             continue;
         }
-        if (tile[x][y].mvmnt[i] > 0) {
-            // a próxima casa já tem sua liberdade e movimento de retorno restringido
-            tile[xx][yy].a--;               // toda casa válida testada perde um de freedom pois não se poderá voltar a casa ocupada
-            tile[xx][yy].mvmnt[9 - i] = 0;  // o movimento reverso ao que leva a estas casas passa ser inválido
-            // as casas que se está checando não poderão mais vir para a casa atual
-
-            // printf("\n\n\n-------\n\n");
-            // printf("%d,  %d , %d", qualCasa(x, y, i), mov[qualCasa(x, y, i)][0], mov[qualCasa(x, y, i)][9 - i]);
+        if (tile[x][y].mvmnt[i] > 0) {      // a casa candidata já tem sua liberdade e movimento de retorno restringido
+            tile[xx][yy].a--;               // toda casa válida testada perde 1 de acessibilidade, pois não se poderá voltar a casa ocupada
+            tile[xx][yy].mvmnt[9 - i] = 0;  // invalida o movimento da possível casa de destino que leva a casa atual
         }
         if (tile[x][y].mvmnt[i] > 0 && tile[x][y].mvmnt[i] < menor) {  // testa qual movimento leva a uma casa com menor liberdade
             menor = tile[x][y].mvmnt[i];
@@ -183,18 +182,16 @@ int bestMove(int x, int y) {
             int margBest = tile[qualCasa(x, y, best).x][qualCasa(x, y, best).y].m;
             int margMv = tile[xx][yy].m;
 
-            if (margMv >= margBest) {
+            if (margMv >= margBest) {  // caso as marginalidades também forem iguais, seleciona a útlima checada
                 menor = tile[x][y].mvmnt[i];
                 best = i;
             }
         }
     }
-    if (best == 0) {  // tirar essa linha
-        best = best;
-    }
     return best;
 }
 
+// Recebe as coordenadas de uma casa de origem e um movimento (mv) e retorna a casa de destino.
 pos qualCasa(int x, int y, int mv) {
     int ml, mc;
 
@@ -227,7 +224,7 @@ pos qualCasa(int x, int y, int mv) {
     }
 }
 
-// atualiza os movimentos de uma casa [tile] específico e retorna sua acessibilidade ou freedom.
+// atualiza os movimentos possíveis de uma casa [tile] específica. Retorna sua acessibilidade (a atual liberdae de movimentos daquela casa)
 int updateKnightMoves(int x, int y, int assign) {
     int freedom = 0;
     int mvmnt = 0;
@@ -264,7 +261,7 @@ int updateKnightMoves(int x, int y, int assign) {
     tile[x][y].a = freedom;
     return freedom;
 }
-
+// reinicializa as variaveis com valor 0, para a próxima execução
 void limpa() {
     for (int y = 0; y < dim; y++) {
         for (int x = 0; x < dim; x++) {
@@ -277,55 +274,56 @@ void limpa() {
         }
     }
 }
-
+// reseta as variáveis para seus valores iniciais de acessibilidade, movimentos e persistencia)
 void setup() {
-    allSteps = backSteps = 0;
+    allSteps = backSteps = passo = 0;
     dim = DIMENSIONS;
-    int counter = 0;
-    // duplo for que percorre a matriz
-    for (int y = 0; y < dim; y++) {
+
+    for (int y = 0; y < dim; y++) {  // for duplo for que percorre a matriz (tabuleiro)
         for (int x = 0; x < dim; x++) {
-            tile[x][y].p = 0;            // atribui -1 inicialmente a todos os tiles (output concerns)
-            updateKnightMoves(x, y, 1);  // atualiza todos os movimentos de todos os tiles da matriz
-            int i = 1;
-            while (i < 9) {                    // loop que percorre os 8 mov[dim * dim][8] de cada title[dim][dim]
-                tile[x][y].persistent[i] = 0;  // atribui -1 para a freedom e pra os 8 mov
+            tile[x][y].p = 0;            // atribui 0 inicialmente a todas as casas (tiles)
+            updateKnightMoves(x, y, 1);  // seta os valores iniciais de acessibilidade e dos movimentos inicialmente possíveis
+            int i = 0;
+            while (i < 9) {  // laço que inicializa com zero a persistencia de todas as casas
+                tile[x][y].persistent[i] = 0;
                 i++;
             }
-            tile[x][y].persistent[0] = 0;  // tile[x][y].a;
         }
     }
-
-    setMarginalidade(0);
+    setMarginalidade(0);  // atribui a marginalidade de cada casa de acordo com as dimensões do tabuleiro
 }
-int marginalidade(int x, int y) {  // retorna a marginalidade da casa. Quanto maior, mais periférica é a casa
-
+// retorna a marginalidade em função da posição da casa. Quanto maior, mais periférica é a casa.
+int marginalidade(int x, int y) {
     float r = (dim + 1) / 2.0;
     float c = round(round((float)(r - (x + 1)) * (float)(r - (x + 1))) + round((float)(r - (y + 1)) * (float)(r - (y + 1))));
     return c;
 }
 
+// atribui a marginalidade de cada casa de acordo com as dimensões do tabuleiro.
 void setMarginalidade(int display) {
-    if (display)    printf("\n //////     MARGINALIDADE     //////// \n");
+    if (display) printf("\n //////     MARGINALIDADE     //////// \n");
     for (int y = 0; y < dim; y++) {
         for (int x = 0; x < dim; x++) {
             tile[x][y].m = marginalidade(x, y);
-            if (display != 0)   printf(" %d ", tile[x][y].m);
+            if (display != 0) printf(" %d ", tile[x][y].m);
         }
-        if (display)    printf("\n");
+        if (display) printf("\n");
     }
 }
 
-void displayChessBoard(int simple) {  // desenha a matriz com /step#freedom/
+// desenha a matriz (tabuleiro) em função dos passos de maneira visualmente organizada
+void displayChessBoard(int simple) {
+    // simple != 0 : imprimie apenas os passos do passeio
+    // simple == 0 : imprime passos do passeio e a atual acessibilidade daquela casa
     printf("\n //////     TABULEIRO     //////// \n");
     for (int y = 0; y < dim; y++) {
         for (int x = 0; x < dim; x++) {
             if (tile[x][y].p < 10) {
-                if (simple) printf(" 0%d ", tile[x][y].p);
-                if (!simple) printf(" |0%d#%d| ", tile[x][y].p, tile[x][y].a);
+                if (simple) printf(" 0%1d ", tile[x][y].p);
+                if (!simple) printf(" |0%1d#%d| ", tile[x][y].p, tile[x][y].a);
             } else {
-                if (simple) printf(" %d ", tile[x][y].p);
-                if (!simple) printf(" |%d#%d| ", tile[x][y].p, tile[x][y].a);
+                if (simple) printf(" %2d ", tile[x][y].p);
+                if (!simple) printf(" |%2d#%d| ", tile[x][y].p, tile[x][y].a);
             }
         }
         printf("\n");
