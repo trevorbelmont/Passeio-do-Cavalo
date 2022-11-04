@@ -7,7 +7,7 @@ int main() {
         int x = 0, y = 0;
         printf("digite as coordenadas: ");
         scanf("%d %d", &x, &y);
-        update(x,y);
+        passeio(x,y);
     }
     return 0;
 }
