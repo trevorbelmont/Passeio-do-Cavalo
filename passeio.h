@@ -46,7 +46,10 @@ int dim;                           // declaa variável de dimensão do tabuleiro
 int passo;                         // declara variável do passo de cada casa no passeio
 int visitadas, regredidas;           // respectivamente contador de passos totais e de retornos das tentativas
 
-void passeio(int x, int y) {
+//Durante o desenvolvimento considerei mais intuitivo nomear as variáveis x e y como coordenadas cartesianas (não como entradas de matriz).
+//Dentro função passeio, portanto, o par ordenado (x,y) designa uma certa posição (horizontal, vertical). Ou seja, (coluna, linha).
+// A sintaxe da chamada da função, no entanto, segue a ordem definida na especificação do TP: passeio (linha, coluna).
+void passeio(int y, int x) {  
     // adequa o valor da entrada x e y,[1,8], aos valores do código, [0,7]
     x--;
     y--;
@@ -288,10 +291,10 @@ void displayChessBoard(int simple) {
     for (int y = 0; y < dim; y++) {
         for (int x = 0; x < dim; x++) {
             if (tile[x][y].p < 10) {
-                if (simple) printf("0%1d ", tile[x][y].p);
+                if (simple) printf("0%-1d ", tile[x][y].p);
                 if (!simple) printf(" |0%1d#%d| ", tile[x][y].p, tile[x][y].a);
             } else {
-                if (simple) printf("%2d ", tile[x][y].p);
+                if (simple) printf("%-2d ", tile[x][y].p);
                 if (!simple) printf(" |%2d#%d| ", tile[x][y].p, tile[x][y].a);
             }
         }
