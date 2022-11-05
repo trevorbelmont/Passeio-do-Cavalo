@@ -7,12 +7,18 @@
 #define DIMENSIONS 8
 #endif
 
-// estrutura de dados usada para cada casa do tabulerio
-struct pos {
-    int x;  // coordenada X.
-    int y;  // coordenada Y.
-    // as coordenadas x e y são usadas sobretudo pela função "qualCasa(x,y,mvmnt)" para retornar a posição que o movimento leva.
 
+  // as coordenadas x e y são usadas sobretudo pela função "qualCasa(x,y,mvmnt)" para retornar a posição que o movimento leva.
+
+typedef struct {
+    int x;
+    int y;
+} coordenadas;
+
+// estrutura de dados usada para cada casa do tabulerio
+
+struct pos {
+  
     int a;  // acessibilidade ou liberdade de movimentos possíveis a partir da casa
 
     int mvmnt[9];  // vetor de movimentos possíveis. cada índice guarda o nível de acessibilidade, a, da casa que aquele movimento leva
@@ -36,7 +42,7 @@ void displayChessBoard(int simples);  // Imprime o tabuleiro alinhado e passeio 
 void flushRide(FILE *arq);            // Imprime o passeio no arquivo.
 
 int updateKnightMoves(int x, int y, int assign);  // atualiza os movimentos possíveis e retorna a acessibilidade da casa.
-pos qualCasa(int x, int y, int mv);               // retorna a posição que o movimento mv leva a partir da casa x,y.
+coordenadas qualCasa(int x, int y, int mv);               // retorna a posição que o movimento mv leva a partir da casa x,y.
 int bestMove(int x, int y);                       // retorna o melhor movimento daquela casa ou 0 se não houver movimentos disponíveis.
 
 // Função recursiva que calcula o melhor movimento e cavalga para próxima casa ou retorna a casa anterior (se não houver movimentos livres);
@@ -45,16 +51,14 @@ void ride(int x, int y, int ridingBack);  // ridingBack != 0; está retornando (
 pos tile[DIMENSIONS][DIMENSIONS];  // declara matriz do tabuleiro n x n
 int dim;                           // declaa variável de dimensão do tabuleiro
 int passo;                         // declara variável do passo de cada casa no passeio
-int visitadas, regredidas;           // respectivamente contador de passos totais e de retornos das tentativas
+int visitadas, regredidas;         // respectivamente contador de passos totais e de retornos das tentativas
 
-
-
-//Durante o desenvolvimento considerei mais intuitivo nomear as variáveis x e y como coordenadas cartesianas (não como entradas de matriz).
-//Dentro função passeio, portanto, o par ordenado (x,y) designa uma certa posição (horizontal, vertical). Ou seja, (coluna, linha).
-// A sintaxe da chamada da função, no entanto, segue a ordem definida na especificação do TP: passeio (linha, coluna).
-void passeio(int y, int x) {  
-    FILE *saida;                     // ponteiro que aponta arquivo
-    saida = fopen("saida.txt","a"); //abre o arquivo no modo apend - cria o arquivo se necessário
+// Durante o desenvolvimento considerei mais intuitivo nomear as variáveis x e y como coordenadas cartesianas (não como entradas de matriz).
+// Dentro função passeio, portanto, o par ordenado (x,y) designa uma certa posição (horizontal, vertical). Ou seja, (coluna, linha).
+//  A sintaxe da chamada da função, no entanto, segue a ordem definida na especificação do TP: passeio (linha, coluna).
+void passeio(int y, int x) {
+    FILE *saida;                      // ponteiro que aponta arquivo
+    saida = fopen("saida.txt", "a");  // abre o arquivo no modo apend - cria o arquivo se necessário
 
     // adequa o valor da entrada x e y,[1,8], aos valores do código, [0,7]
     x--;
@@ -67,12 +71,12 @@ void passeio(int y, int x) {
     tile[x][y].p = passo = visitadas = 1;
 
     ride(x, y, 0);
-    flushRide(saida); // imprime passeio de acordo com as normas do TP
-    //displayChessBoard(1); // imprime no terminal o passeio alinhado e visualmente organizado (mais fácil visualizar)
-    
-    //Dá flush no buffer e fechar o arquivo
+    flushRide(saida);  // imprime passeio de acordo com as normas do TP
+    // displayChessBoard(1); // imprime no terminal o passeio alinhado e visualmente organizado (mais fácil visualizar)
+
+    // Dá flush no buffer e fechar o arquivo
     fclose(saida);
-    //limpa o valor das variáveis preparando para próxima execuaçao da funação
+    // limpa o valor das variáveis preparando para próxima execuaçao da funação
     limpa();
 }
 
@@ -152,7 +156,7 @@ int bestMove(int x, int y) {
         if (tile[x][y].mvmnt[i] <= 0) {  // movimento inválido ou leva para casa já vistiada
             continue;
         }
-        pos candidata = qualCasa(x, y, i);  // a posição da casa que o movimento i leva (a possível casa analisada nesta iteração)
+        coordenadas candidata = qualCasa(x, y, i);  // a posição da casa que o movimento i leva (a possível casa analisada nesta iteração)
         int xx = candidata.x;
         int yy = candidata.y;
 
@@ -180,7 +184,7 @@ int bestMove(int x, int y) {
 }
 
 // Recebe as coordenadas de uma casa de origem e um movimento (mv) e retorna a casa de destino.
-pos qualCasa(int x, int y, int mv) {
+coordenadas qualCasa(int x, int y, int mv) {
     int ml, mc;
 
     // determina a variação de linha e coluna que o movimento indica
@@ -193,14 +197,14 @@ pos qualCasa(int x, int y, int mv) {
         ml = (3 - abs(mc)) * pow(-1, mv - 1);  // calcula variação de linha em função da coluna
     }
 
-    pos p;  // posição determinada pelo movimento mv a partir daquela casa
+    coordenadas p;  // posição determinada pelo movimento mv a partir daquela casa
     p.y = y + ml;
     p.x = x + mc;
 
     if (p.x >= 0 && p.x < dim && p.y >= 0 && p.y < dim && tile[p.x][p.y].p <= 0) {  // se casa válida e não visitada
         return p;                                                                   // retorna a nova posição
     } else {                                                                        // caso tenha havido algum erro, continua na mesma casa
-        pos same;
+        coordenadas same;
         same.x = x;
         same.y = y;
         return same;  // retorna a casa atual (a mesma que já se está)
@@ -298,7 +302,7 @@ void setMarginalidade(int display) {
 void displayChessBoard(int simple) {
     // simple != 0 : imprimie apenas os passos do passeio
     // simple == 0 : imprime passos do passeio e a atual acessibilidade daquela casa
-    //printf("\n //////     TABULEIRO     //////// \n");
+    // printf("\n //////     TABULEIRO     //////// \n");
     for (int y = 0; y < dim; y++) {
         for (int x = 0; x < dim; x++) {
             if (tile[x][y].p < 10) {
@@ -336,9 +340,9 @@ void displayKnightMovements() {  // desenha a matriz com /step#freedom/
 void flushRide(FILE *arq) {
     for (int y = 0; y < dim; y++) {
         for (int x = 0; x < dim; x++) {
-            fprintf(arq,"%d ", tile[x][y].p);
+            fprintf(arq, "%d ", tile[x][y].p);
         }
-        fprintf(arq,"\n");
+        fprintf(arq, "\n");
     }
-    fprintf(arq,"%d %d\n", visitadas, regredidas);
+    fprintf(arq, "%d %d\n", visitadas, regredidas);
 }
