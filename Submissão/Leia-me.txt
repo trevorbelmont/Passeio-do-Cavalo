@@ -1,0 +1,16 @@
+Ambientes Computacionais usados e testados:
+    O código "passeio.h" foi desenvolvido e testado em Debian 10 arquitetura x86-64.
+    O compilador usado no desenvolvimento foi GCC 10.2.
+    
+Testes adicionais foram executados com êxito em:
+    Debian 10 x86-64,       Compilador Clang 11.0
+    
+    Ubunto 20.O4 x86-64,    Compilador GCC 10.3
+    Ubunto 20.04 x86-64,    Compilador Clang 12.0.
+
+O tempo de execução do algoritmo é de até 1 seg para quaisquer posições no tabuleiro 8x8.
+
+Em tabuleiros muito maiores o tempo de execução varia dependendo da posição inicial escolhida.
+Em um tabuleiro 40x40 pode levar 3 segs, por exemplo, e em um tabuleiro 100x100 pode levar cerca de 8 segs.
+
+Como a enunciado do trabalho propõe apenas uma solução pra um tabuleiro 8x8, a dimensão padrão do "passeio.h" é 8. A dimensão pode no entanto ser alterada usando a flag  "-D DIMENSIONS= <valor>" para redefinir a dimensão ao compilar.
